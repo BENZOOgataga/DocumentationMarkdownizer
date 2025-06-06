@@ -1,11 +1,13 @@
 # Markdownizer - Documentation to Markdown Converter
 
-A robust Python tool that converts documentation pages to clean Markdown format, handling JavaScript-rendered content using Selenium WebDriver.
+A robust Python tool that converts documentation pages to clean Markdown format, handling JavaScript-rendered content using Selenium WebDriver. **NEW in v2.1.0**: Multi-page documentation scraping!
 
 ## 🚀 Features
 
 - **JavaScript Support**: Handles dynamically loaded content using Selenium Chrome WebDriver
 - **Smart Content Extraction**: Automatically identifies and extracts main documentation content
+- **🆕 Multi-Page Scraping**: Scrape entire documentation sites with automatic link discovery
+- **Intelligent Link Detection**: Automatically finds and follows documentation links
 - **Clean Output**: Removes navigation, ads, headers, footers, and other unwanted elements
 - **File Management**: Intelligent handling of existing output files with auto-numbering
 - **Flexible Output**: Custom output paths and filenames
@@ -32,9 +34,9 @@ pip install -r requirements.txt
 
 ## 🎯 Usage
 
-### Basic Usage
+### Single Page Conversion (Original Mode)
 ```bash
-# Convert a documentation page
+# Convert a single documentation page
 python src/main.py https://docs.example.com/api
 
 # Convert with custom filename
@@ -44,92 +46,159 @@ python src/main.py https://docs.example.com/api -o my-docs.md
 python src/main.py https://docs.example.com/api --output-path="./documentation"
 ```
 
-### Advanced Options
+### 🆕 Multi-Page Documentation Scraping
 ```bash
-python src/main.py <URL> [OPTIONS]
+# Scrape entire documentation (up to 50 pages by default)
+python src/main.py https://docs.example.com/guide --multi-page
+
+# Scrape with custom limits and output directory
+python src/main.py https://docs.example.com --multi-page --max-pages 100 --output-path="./full-docs"
+
+# Scrape with custom rate limiting (slower, more respectful)
+python src/main.py https://docs.example.com --multi-page --rate-limit 2.0
 ```
 
-#### Command Line Options:
-- `-o, --output FILENAME`: Specify output filename
+### Command Line Options
+
+#### Basic Options:
+- `-o, --output FILENAME`: Specify output filename (single page only)
 - `--output-path PATH`: Specify output directory
-- `--wait SECONDS`: Wait time for page loading (default: 5)
-- `--timeout SECONDS`: Maximum wait time (default: 30)
-- `--no-headless`: Run browser visibly for debugging
 - `--verbose, -v`: Enable detailed logging
 - `--force, -f`: Overwrite existing files without prompting
 
-### Real-World Examples
+#### Multi-Page Options:
+- `--multi-page`: Enable multi-page scraping mode
+- `--max-pages NUMBER`: Maximum pages to scrape (default: 50)
+- `--same-domain-only`: Only scrape pages from same domain (default: true)
+- `--rate-limit SECONDS`: Delay between requests (default: 1.0)
 
+#### Browser Options:
+- `--wait SECONDS`: Wait time for page loading (default: 5)
+- `--timeout SECONDS`: Maximum wait time (default: 30)
+- `--no-headless`: Run browser visibly for debugging
+
+## 🌟 Real-World Examples
+
+### Single Page Examples
 ```bash
-# Convert API documentation with extended wait time
-python src/main.py https://api.example.com/docs --wait 10 --output-path="./api-docs"
+# Convert React documentation
+python src/main.py https://react.dev/learn/your-first-component -o react-component-guide.md
 
-# Debug problematic page with visible browser
-python src/main.py https://complex-site.com/docs --no-headless --verbose
-
-# Batch convert to organized directory structure
-python src/main.py https://docs.react.dev/learn --output-path="./docs/react" -o react-tutorial.md
-
-# Force overwrite existing file
-python src/main.py https://vue-docs.com/guide --force -o vue-guide.md
-
-# Convert with auto-generated filename
-python src/main.py https://docs.python.org/3/tutorial/ --output-path="./python-docs"
+# Convert API reference with debug mode
+python src/main.py https://api.example.com/reference --no-headless --verbose
 ```
 
-## 📁 File Management
-
-### Output File Handling
-- **Auto-numbering**: If `output.md` exists, creates `output_1.md`, `output_2.md`, etc.
-- **Custom paths**: Use `--output-path` to organize files in directories
-- **Safe overwrites**: Prompts before overwriting unless `--force` is used
-- **Auto-naming**: Generates filenames from page titles when not specified
-
-### Examples:
+### Multi-Page Examples
 ```bash
-# These will create numbered files if they exist:
-python src/main.py https://site1.com/docs  # → output.md
-python src/main.py https://site2.com/docs  # → output_1.md  
-python src/main.py https://site3.com/docs  # → output_2.md
+# Scrape complete React documentation
+python src/main.py https://react.dev/learn --multi-page --max-pages 30 --output-path="./react-docs"
 
-# Organized output:
-python src/main.py https://react.dev/docs --output-path="./docs/react"
-python src/main.py https://vue.js.org/guide --output-path="./docs/vue"
+# Scrape Vue.js guide with respectful rate limiting
+python src/main.py https://vuejs.org/guide/ --multi-page --rate-limit 2.0 --max-pages 25
+
+# Scrape API documentation
+python src/main.py https://docs.example.com/api --multi-page --max-pages 15 --output-path="./api-docs"
+
+# Scrape with maximum verbosity for debugging
+python src/main.py https://docs.complex-site.com --multi-page --verbose --no-headless
 ```
+
+## 📁 Output Structure
+
+### Single Page Mode
+```
+./
+├── output.md              # Default output
+├── custom-name.md          # Custom filename
+└── output_1.md            # Auto-numbered if file exists
+```
+
+### Multi-Page Mode
+```
+./docs-example-com_docs/    # Auto-generated directory
+├── index.md               # Generated index with links
+├── getting-started.md     # Individual pages
+├── api-reference.md
+├── tutorial-basics.md
+└── advanced-concepts.md
+```
+
+## 🔧 How Multi-Page Scraping Works
+
+1. **Starting Point**: Begins with the provided URL
+2. **Link Discovery**: Extracts documentation links from navigation, sidebars, and content
+3. **Intelligent Filtering**: Only follows links that appear to be documentation pages
+4. **Content Extraction**: Converts each page to clean Markdown
+5. **File Organization**: Saves files with meaningful names based on page titles
+6. **Index Generation**: Creates an index.md file linking all scraped pages
+
+### Supported Documentation Patterns
+- `/docs/`, `/guide/`, `/tutorial/`, `/reference/`
+- `/api/`, `/manual/`, `/help/`, `/documentation/`
+- Navigation links, sidebar links, table of contents
+- Same-domain links (configurable)
 
 ## 🏗️ Project Structure
 
 ```
 Markdownizer/
 ├── src/
-│   ├── main.py          # CLI interface and main logic
-│   ├── scraper.py       # Web scraping with Selenium
-│   ├── converter.py     # HTML to Markdown conversion
-│   └── utils.py         # Utility functions
-├── requirements.txt     # Python dependencies
-├── README.md           # This documentation
-└── .gitignore          # Git ignore rules
+│   ├── main.py           # CLI interface and orchestration
+│   ├── scraper.py        # Single-page web scraping
+│   ├── multi_scraper.py  # 🆕 Multi-page scraping logic
+│   ├── converter.py      # HTML to Markdown conversion
+│   └── utils.py          # Utility functions
+├── requirements.txt      # Python dependencies
+├── CHANGELOG.md         # Detailed version history
+└── README.md           # This documentation
 ```
-
-## 🔧 How It Works
-
-1. **Web Scraping**: Uses Selenium WebDriver to load pages and execute JavaScript
-2. **Content Detection**: Intelligently identifies main content areas
-3. **Content Cleaning**: Removes navigation, ads, and unwanted elements
-4. **Markdown Conversion**: Converts clean HTML to well-formatted Markdown
-5. **File Management**: Handles output paths and prevents file conflicts
 
 ## 🎛️ Supported Sites
 
-- **Documentation Platforms**: GitBook, Docusaurus, VuePress, Sphinx
-- **API References**: Swagger/OpenAPI, Postman docs, custom API documentation
-- **Framework Docs**: React, Vue, Angular, Django, Flask documentation
-- **Technical Resources**: MDN, W3Schools, Stack Overflow documentation
-- **Wiki Pages**: GitHub wikis, Confluence, MediaWiki
+### Documentation Platforms
+- **GitBook**: Full site scraping with navigation
+- **Docusaurus**: React-based documentation sites
+- **VuePress**: Vue-powered documentation
+- **Sphinx**: Python documentation standard
+- **MkDocs**: Markdown-based documentation
+
+### Framework Documentation
+- **React**: Complete guide and API reference scraping
+- **Vue.js**: Full documentation scraping
+- **Angular**: Comprehensive guide extraction
+- **Django/Flask**: Python web framework docs
+
+### API Documentation
+- **Swagger/OpenAPI**: Complete API reference
+- **Postman**: API documentation collections
+- **Custom API docs**: Most documentation formats
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Multi-Page Scraping Issues
+
+**Too many/few pages found:**
+```bash
+# Adjust max-pages limit
+python src/main.py <URL> --multi-page --max-pages 100
+
+# Use verbose mode to see what links are being found
+python src/main.py <URL> --multi-page --verbose
+```
+
+**Rate limiting concerns:**
+```bash
+# Increase delay between requests
+python src/main.py <URL> --multi-page --rate-limit 3.0
+```
+
+**Wrong pages being scraped:**
+```bash
+# Check the patterns in multi_scraper.py and adjust if needed
+# Use --verbose to see which URLs are being processed
+```
+
+### Single Page Issues
 
 **ChromeDriver Problems:**
 ```bash
@@ -148,58 +217,46 @@ python src/main.py <URL> --wait 15 --timeout 60
 python src/main.py <URL> --no-headless --verbose
 ```
 
-**Permission Errors:**
-```bash
-# Check directory permissions
-python src/main.py <URL> --output-path="/path/with/write/access"
-```
-
-**Content Quality Issues:**
-```bash
-# Use verbose mode to see what's happening
-python src/main.py <URL> --verbose --no-headless
-```
-
-### Debug Mode
-
-```bash
-# Run with maximum verbosity and visible browser
-python src/main.py <URL> --no-headless --verbose --wait 10
-```
-
 ## 🚀 Production Usage
 
-### Batch Processing
+### Automated Documentation Backup
 ```bash
-# Create a script for multiple URLs
 #!/bin/bash
-URLS=(
+# Backup multiple documentation sites
+SITES=(
     "https://docs.react.dev/learn"
     "https://vuejs.org/guide/"
-    "https://angular.io/guide/setup-local"
+    "https://docs.python.org/3/tutorial/"
 )
 
-for url in "${URLS[@]}"; do
-    python src/main.py "$url" --output-path="./docs" --force
+for site in "${SITES[@]}"; do
+    python src/main.py "$site" --multi-page --max-pages 50 --force
 done
 ```
 
 ### CI/CD Integration
 ```yaml
 # GitHub Actions example
-- name: Convert Documentation
+- name: Scrape Documentation
   run: |
     python src/main.py ${{ env.DOC_URL }} \
-      --output-path="./generated-docs" \
+      --multi-page --max-pages 30 \
+      --output-path="./scraped-docs" \
       --force --verbose
 ```
 
 ## 📊 Performance Tips
 
+### Multi-Page Scraping
+- Start with lower `--max-pages` values to test
+- Use `--rate-limit` to be respectful to servers
+- Monitor with `--verbose` for the first run
+- Use `--same-domain-only` to avoid external links
+
+### Single Page
 - Use `--wait` appropriately for your target sites
 - Set reasonable `--timeout` values for slow sites
 - Use `--headless` (default) for better performance
-- Consider batch processing for multiple pages
 
 ## 🤝 Contributing
 
@@ -215,7 +272,19 @@ This project is open source. Feel free to use, modify, and distribute.
 
 ## 🔄 Changelog
 
-### v2.0.0 (Production Ready)
+### v1.2.0 - Multi-Page Documentation Scraping
+- ✨ **NEW**: Multi-page documentation scraping with `--multi-page` flag
+- ✨ **NEW**: Intelligent link discovery and filtering for documentation sites
+- ✨ **NEW**: Automatic index file generation with links to all scraped pages
+- ✨ **NEW**: Rate limiting and respectful scraping with `--rate-limit`
+- ✨ **NEW**: Configurable maximum page limits with `--max-pages`
+- ✨ **NEW**: Same-domain filtering to prevent external link following
+- 🔧 Enhanced CLI with multi-page specific options
+- 🔧 Improved filename generation from page titles
+- 🔧 Better error handling for batch operations
+- 📖 Updated documentation with comprehensive examples
+
+### v1.1.0 (Production Ready)
 - ✅ Added intelligent file management with auto-numbering
 - ✅ Implemented custom output paths with `--output-path`
 - ✅ Added comprehensive error handling and logging

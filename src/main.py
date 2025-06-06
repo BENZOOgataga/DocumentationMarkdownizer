@@ -5,32 +5,55 @@ import logging
 from pathlib import Path
 from scraper import DocumentationScraper
 from converter import DocumentationConverter
+from multi_scraper import MultiPageScraper
 from utils import sanitize_filename, get_safe_output_path, setup_logging
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert documentation page to Markdown',
+        description='Convert documentation page(s) to Markdown',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  # Single page conversion
   python src/main.py https://docs.example.com/api
   python src/main.py https://docs.example.com/api -o custom-name.md
-  python src/main.py https://docs.example.com/api --output-path="./docs"
+  
+  # Multi-page documentation scraping
+  python src/main.py https://docs.example.com/guide --multi-page --max-pages 20
+  python src/main.py https://docs.example.com --multi-page --output-path="./full-docs"
+  
+  # Advanced options
   python src/main.py https://docs.example.com/api --wait 10 --no-headless
         """
     )
     
     parser.add_argument('url', help='URL of the documentation page to convert')
+    
+    # Output options
     parser.add_argument('-o', '--output', 
-                       help='Output filename (default: auto-generated from page title)')
+                       help='Output filename (single page mode only)')
     parser.add_argument('--output-path', 
                        help='Output directory path (default: current directory)')
+    
+    # Multi-page options
+    parser.add_argument('--multi-page', action='store_true',
+                       help='Enable multi-page documentation scraping')
+    parser.add_argument('--max-pages', type=int, default=50,
+                       help='Maximum number of pages to scrape in multi-page mode (default: 50)')
+    parser.add_argument('--same-domain-only', action='store_true', default=True,
+                       help='Only scrape pages from the same domain (default: True)')
+    parser.add_argument('--rate-limit', type=float, default=1.0,
+                       help='Delay between requests in seconds (default: 1.0)')
+    
+    # Browser options
     parser.add_argument('--wait', type=int, default=5,
                        help='Wait time for page to load in seconds (default: 5)')
-    parser.add_argument('--no-headless', action='store_true',
-                       help='Run browser in non-headless mode for debugging')
     parser.add_argument('--timeout', type=int, default=30,
                        help='Maximum time to wait for page load in seconds (default: 30)')
+    parser.add_argument('--no-headless', action='store_true',
+                       help='Run browser in non-headless mode for debugging')
+    
+    # Other options
     parser.add_argument('--verbose', '-v', action='store_true',
                        help='Enable verbose logging')
     parser.add_argument('--force', '-f', action='store_true',
@@ -49,12 +72,73 @@ Examples:
             logger.error("❌ Invalid URL. Please provide a URL starting with http:// or https://")
             sys.exit(1)
         
-        logger.info(f"🚀 Starting conversion of: {args.url}")
-        
-        # Initialize scraper and converter
-        scraper = DocumentationScraper(headless=not args.no_headless)
-        converter = DocumentationConverter()
-        
+        if args.multi_page:
+            # Multi-page mode
+            run_multi_page_scraping(args, logger)
+        else:
+            # Single page mode
+            run_single_page_conversion(args, logger)
+            
+    except KeyboardInterrupt:
+        logger.info("\n⚠️  Operation interrupted by user.")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"❌ Unexpected error: {str(e)}")
+        if args.verbose:
+            logger.exception("Full error traceback:")
+        sys.exit(1)
+
+def run_multi_page_scraping(args, logger):
+    """Run multi-page documentation scraping"""
+    logger.info(f"🚀 Starting multi-page scraping from: {args.url}")
+    
+    # Determine output directory
+    if args.output_path:
+        output_dir = Path(args.output_path)
+    else:
+        # Generate directory name from URL
+        from urllib.parse import urlparse
+        parsed_url = urlparse(args.url)
+        dir_name = sanitize_filename(f"{parsed_url.netloc}_docs")
+        output_dir = Path(dir_name)
+    
+    # Check if directory exists and handle accordingly
+    if output_dir.exists() and not args.force:
+        if any(output_dir.iterdir()):  # Directory not empty
+            response = input(f"⚠️  Directory '{output_dir}' exists and is not empty. Continue? (y/N): ")
+            if response.lower() != 'y':
+                logger.info("❌ Operation cancelled by user.")
+                return
+    
+    # Initialize multi-page scraper
+    multi_scraper = MultiPageScraper(
+        base_url=args.url,
+        output_dir=output_dir,
+        max_pages=args.max_pages,
+        same_domain_only=args.same_domain_only
+    )
+    
+    # Run scraping
+    summary = multi_scraper.run(wait_between_requests=args.rate_limit)
+    
+    # Generate index file
+    multi_scraper.generate_index_file(summary)
+    
+    # Final summary
+    logger.info(f"🎉 Multi-page scraping completed!")
+    logger.info(f"📁 Output directory: {output_dir}")
+    logger.info(f"📄 Pages scraped: {summary['scraped_count']}")
+    logger.info(f"📋 Index file: {output_dir / 'index.md'}")
+
+def run_single_page_conversion(args, logger):
+    """Run single page conversion (original functionality)"""
+    logger.info(f"🚀 Starting single page conversion of: {args.url}")
+    
+    # Initialize scraper and converter
+    scraper = DocumentationScraper(headless=not args.no_headless)
+    converter = DocumentationConverter()
+    
+    try:
         # Scrape the page
         logger.info("🔍 Scraping page content...")
         soup = scraper.scrape_page(args.url, wait_time=args.wait, timeout=args.timeout)
@@ -91,19 +175,8 @@ Examples:
         logger.info(f"📄 Output saved to: {output_path}")
         logger.info(f"📊 File size: {os.path.getsize(output_path)} bytes")
         
-    except KeyboardInterrupt:
-        logger.info("\n⚠️  Conversion interrupted by user.")
-        sys.exit(1)
-    except Exception as e:
-        logger.error(f"❌ Unexpected error: {str(e)}")
-        if args.verbose:
-            logger.exception("Full error traceback:")
-        sys.exit(1)
     finally:
-        try:
-            scraper.close()
-        except:
-            pass
+        scraper.close()
 
 def determine_output_path(output_arg, output_path_arg, soup, force, logger):
     """Determine the final output file path"""

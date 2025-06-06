@@ -1,6 +1,6 @@
 # Markdownizer - Documentation to Markdown Converter
 
-A robust Python tool that converts documentation pages to clean Markdown format, handling JavaScript-rendered content using Selenium WebDriver. **NEW in v2.1.0**: Multi-page documentation scraping!
+A robust Python tool that converts documentation pages to clean Markdown format, handling JavaScript-rendered content using Selenium WebDriver. **NEW in v1.2.0**: Multi-page documentation scraping!
 
 ## 🚀 Features
 

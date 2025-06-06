@@ -1,0 +1,7 @@
+requests==2.31.0
+beautifulsoup4==4.12.2
+html2text==2020.1.16
+selenium==4.15.2
+webdriver-manager==4.0.1
+markdownify==0.11.6
+lxml==4.9.3
